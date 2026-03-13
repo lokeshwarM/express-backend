@@ -35,7 +35,7 @@ public class DevController {
         userRepository.save(user);
 
         Listener listener = new Listener();
-        listener.setId(UUID.randomUUID());
+        
         listener.setUser(user);
         listener.setAvailable(true);
         listener.setBlacklisted(false);

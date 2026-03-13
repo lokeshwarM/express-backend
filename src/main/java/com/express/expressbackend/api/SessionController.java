@@ -22,7 +22,8 @@ public class SessionController {
     public SessionResponse createSession(@RequestBody CreateSessionRequest request) {
         return sessionService.createSession(
                 request.getUserId(),
-                request.getListenerId()
+                request.getListenerId(),
+                request.getType()
         );
     }
     @PostMapping("/{id}/start")
