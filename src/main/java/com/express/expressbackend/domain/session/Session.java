@@ -25,6 +25,10 @@ public class Session {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    private SessionType type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private SessionStatus status;
 
     private Instant startedAt;
@@ -84,4 +88,12 @@ public class Session {
     public OffsetDateTime getCreatedAt() {
         return createdAt;
     }
+
+    public SessionType getType() {
+        return type;
+    }
+
+    public void setType(SessionType type) {
+        this.type = type;
+    }    
 }
