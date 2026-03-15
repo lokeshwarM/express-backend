@@ -16,11 +16,15 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(nullable = false)
+    private String passwordHash;
+
     @Column(nullable = false, unique = true)
     private String publicDisplayId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String role;
+    private UserRole role;
 
     @Column(nullable = false)
     private boolean active;
@@ -35,14 +39,19 @@ public class User {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
+    public String getPasswordHash() {return passwordHash;}
+    public void setPasswordHash(String passwordHash) {this.passwordHash = passwordHash;}
+
     public String getPublicDisplayId() { return publicDisplayId; }
     public void setPublicDisplayId(String publicDisplayId) { this.publicDisplayId = publicDisplayId; }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    public UserRole  getRole() { return role; }
+    public void setRole(UserRole  role) { this.role = role; }
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
 
     public OffsetDateTime getCreatedAt() { return createdAt; }
+
+
 }

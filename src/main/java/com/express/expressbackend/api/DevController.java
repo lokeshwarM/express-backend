@@ -4,6 +4,8 @@ import com.express.expressbackend.domain.listener.Listener;
 import com.express.expressbackend.domain.listener.ListenerRepository;
 import com.express.expressbackend.domain.user.User;
 import com.express.expressbackend.domain.user.UserRepository;
+import com.express.expressbackend.domain.user.UserRole;
+
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
@@ -28,7 +30,7 @@ public class DevController {
         User user = new User();
         user.setEmail("testuser@example.com");
         user.setPublicDisplayId("USER123");
-        user.setRole("USER");
+        user.setRole(UserRole.USER);
         user.setActive(true);
         
 
