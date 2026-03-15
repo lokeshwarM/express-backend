@@ -33,4 +33,19 @@ public class FlagRecord {
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
     // getters & setters
+    public void setListener(Listener listener) {
+        this.listener = listener;
+    }
+
+    public void setSession(Session session) {
+        this.session = session;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+
+    public void setConfidenceScore(double confidenceScore) {
+        this.confidenceScore = confidenceScore;
+    }
 }
