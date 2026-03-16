@@ -5,6 +5,8 @@ import com.express.expressbackend.domain.session.Session;
 import com.express.expressbackend.domain.session.SessionResponse;
 import com.express.expressbackend.domain.session.SessionService;
 import org.springframework.web.bind.annotation.*;
+
+import com.express.expressbackend.domain.common.ApiResponse;
 import com.express.expressbackend.domain.common.AuthUtil;
 
 import java.util.UUID;
@@ -20,21 +22,18 @@ public class SessionController {
     }
 
     @PostMapping
-    public SessionResponse createSession(@RequestBody CreateSessionRequest request) {
+    public ApiResponse<SessionResponse> createSession(@RequestBody CreateSessionRequest request) {
         String email = AuthUtil.getCurrentUserEmail();
-        return sessionService.createSession(
-                email,
-                request.getListenerId(),
-                request.getType()
-        );
+        return new ApiResponse<>(sessionService.createSession(email, request.getType()));
     }
+    
     @PostMapping("/{id}/start")
-    public SessionResponse start(@PathVariable UUID id) {
-        return sessionService.startSession(id);
+    public ApiResponse<SessionResponse> start(@PathVariable UUID id) {
+        return new ApiResponse<>(sessionService.startSession(id));
     }
 
     @PostMapping("/{id}/end")
-    public SessionResponse end(@PathVariable UUID id) {
-        return sessionService.endSession(id);
+    public ApiResponse<SessionResponse> end(@PathVariable UUID id) {
+        return new ApiResponse<>(sessionService.endSession(id));
     }
 }

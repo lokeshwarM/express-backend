@@ -4,6 +4,7 @@ import com.express.expressbackend.domain.auth.AuthResponse;
 import com.express.expressbackend.domain.auth.AuthService;
 import com.express.expressbackend.domain.auth.LoginRequest;
 import com.express.expressbackend.domain.auth.SignupRequest;
+import com.express.expressbackend.domain.common.ApiResponse;
 import com.express.expressbackend.domain.user.User;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,12 +19,12 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public AuthResponse signup(@RequestBody SignupRequest request) {
-        return authService.signup(request);
+    public ApiResponse<AuthResponse> signup(@RequestBody SignupRequest request) {
+        return new ApiResponse<>(authService.signup(request));
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@RequestBody LoginRequest request) {
-        return authService.login(request);
+    public ApiResponse<AuthResponse> login(@RequestBody LoginRequest request) {
+        return new ApiResponse<>(authService.login(request));
     }
 }
