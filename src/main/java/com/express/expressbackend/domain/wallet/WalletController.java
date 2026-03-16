@@ -2,6 +2,8 @@ package com.express.expressbackend.domain.wallet;
 
 import org.springframework.web.bind.annotation.*;
 
+import com.express.expressbackend.domain.common.ApiResponse;
+
 import java.util.UUID;
 
 @RestController
@@ -16,14 +18,14 @@ public class WalletController {
 
     // Get balance
     @GetMapping("/{userId}/balance")
-    public double getBalance(@PathVariable UUID userId) {
-        return walletService.getBalance(userId);
+    public ApiResponse<Double> getBalance(@PathVariable UUID userId) {
+        return new ApiResponse<>(walletService.getBalance(userId));
     }
 
     // Recharge wallet
     @PostMapping("/{userId}/recharge")
-    public double recharge(@PathVariable UUID userId,
-                           @RequestParam double amount) {
-        return walletService.recharge(userId, amount);
+    public ApiResponse<Double> recharge(@PathVariable UUID userId,
+                                        @RequestParam double amount) {
+        return new ApiResponse<>(walletService.recharge(userId, amount));
     }
 }

@@ -45,16 +45,15 @@ public class SessionService {
         this.ledgerEntryRepository = ledgerEntryRepository;
     }
 
-    public SessionResponse createSession(String email, UUID listenerId, SessionType type) {
+    public SessionResponse createSession(String email, SessionType type) {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Listener listener = listenerRepository.findById(listenerId)
-                .orElseThrow(() -> new RuntimeException("Listener not found"));
+        Listener listener = listenerRepository.findRandomAvailableListener();
 
-        if (!listener.isAvailable()) {
-            throw new RuntimeException("Listener not available");
+        if (listener == null) {
+            throw new RuntimeException("No listeners available");
         }
 
         Optional<Session> activeSession =

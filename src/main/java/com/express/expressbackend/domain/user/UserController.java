@@ -2,6 +2,7 @@ package com.express.expressbackend.domain.user;
 
 import org.springframework.web.bind.annotation.*;
 
+import com.express.expressbackend.domain.common.ApiResponse;
 import com.express.expressbackend.domain.common.AuthUtil;
 
 import java.util.List;
@@ -33,10 +34,10 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public UserProfileResponse getCurrentUser() {
+    public ApiResponse<UserProfileResponse> getCurrentUser() {
 
         String email = AuthUtil.getCurrentUserEmail();
 
-        return userService.getCurrentUser(email);
+        return new ApiResponse<>(userService.getCurrentUser(email));
     }
 }
