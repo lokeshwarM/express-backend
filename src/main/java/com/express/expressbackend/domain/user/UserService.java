@@ -39,4 +39,17 @@ public class UserService {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }    
+
+    public UserProfileResponse getCurrentUser(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return new UserProfileResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getPublicDisplayId(),
+                user.getRole()
+        );
+    }
 }

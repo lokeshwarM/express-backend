@@ -4,17 +4,9 @@ import java.util.UUID;
 
 public class CreateSessionRequest {
 
-    private UUID userId;
     private UUID listenerId;
     private SessionType type;
 
-    public UUID getUserId() {
-        return userId;
-    }
-
-    public void setUserId(UUID userId) {
-        this.userId = userId;
-    }
 
     public UUID getListenerId() {
         return listenerId;

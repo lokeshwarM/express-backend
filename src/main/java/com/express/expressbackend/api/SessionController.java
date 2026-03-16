@@ -5,6 +5,7 @@ import com.express.expressbackend.domain.session.Session;
 import com.express.expressbackend.domain.session.SessionResponse;
 import com.express.expressbackend.domain.session.SessionService;
 import org.springframework.web.bind.annotation.*;
+import com.express.expressbackend.domain.common.AuthUtil;
 
 import java.util.UUID;
 
@@ -20,8 +21,9 @@ public class SessionController {
 
     @PostMapping
     public SessionResponse createSession(@RequestBody CreateSessionRequest request) {
+        String email = AuthUtil.getCurrentUserEmail();
         return sessionService.createSession(
-                request.getUserId(),
+                email,
                 request.getListenerId(),
                 request.getType()
         );

@@ -45,9 +45,9 @@ public class SessionService {
         this.ledgerEntryRepository = ledgerEntryRepository;
     }
 
-    public SessionResponse createSession(UUID userId, UUID listenerId, SessionType type) {
+    public SessionResponse createSession(String email, UUID listenerId, SessionType type) {
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Listener listener = listenerRepository.findById(listenerId)
@@ -58,7 +58,7 @@ public class SessionService {
         }
 
         Optional<Session> activeSession =
-                sessionRepository.findByUserIdAndStatus(userId, SessionStatus.STARTED);
+                sessionRepository.findByUserIdAndStatus(user.getId(), SessionStatus.STARTED);
 
         if (activeSession.isPresent()) {
             throw new RuntimeException("User already has an active session");
@@ -153,6 +153,8 @@ public class SessionService {
         debit.setType(LedgerType.SESSION_DEBIT);
 
         ledgerEntryRepository.save(debit);
+        wallet.setBalance(wallet.getBalance() - amount);
+        walletRepository.save(wallet);
 
         //Listener Credit ledger and wallet
         Wallet listenerWallet = walletRepository
@@ -165,6 +167,8 @@ public class SessionService {
         credit.setType(LedgerType.LISTENER_CREDIT);
 
         ledgerEntryRepository.save(credit);
+        listenerWallet.setBalance(listenerWallet.getBalance() + listenerAmount);
+        walletRepository.save(listenerWallet);
 
         //Platform commission
         User platformUser = userRepository
@@ -181,7 +185,8 @@ public class SessionService {
         platformEntry.setType(LedgerType.PLATFORM_COMMISSION);
 
         ledgerEntryRepository.save(platformEntry);
-
+        platformWallet.setBalance(platformWallet.getBalance() + platformAmount);
+        walletRepository.save(platformWallet);
 
         Listener listener = session.getListener();
         listener.setAvailable(true);

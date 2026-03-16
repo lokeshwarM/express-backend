@@ -1,5 +1,6 @@
 package com.express.expressbackend.api;
 
+import com.express.expressbackend.domain.auth.AuthResponse;
 import com.express.expressbackend.domain.auth.AuthService;
 import com.express.expressbackend.domain.auth.LoginRequest;
 import com.express.expressbackend.domain.auth.SignupRequest;
@@ -17,12 +18,12 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public User signup(@RequestBody SignupRequest request) {
+    public AuthResponse signup(@RequestBody SignupRequest request) {
         return authService.signup(request);
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody LoginRequest request) {
+    public AuthResponse login(@RequestBody LoginRequest request) {
         return authService.login(request);
     }
 }

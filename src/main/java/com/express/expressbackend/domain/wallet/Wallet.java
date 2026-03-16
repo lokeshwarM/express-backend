@@ -22,6 +22,9 @@ public class Wallet {
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
+    @Column(nullable = false)
+    private double balance = 0.0;
+
     public UUID getId() {
         return id;
     }
@@ -36,5 +39,13 @@ public class Wallet {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public double getBalance() {
+        return balance;
+    }
+
+    public void setBalance(double balance) {
+        this.balance = balance;
     }
 }
