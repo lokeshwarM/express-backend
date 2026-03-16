@@ -25,11 +25,7 @@ public class WalletService {
         Wallet wallet = walletRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
 
-        List<LedgerEntry> entries = ledgerRepository.findByWalletId(wallet.getId());
-
-        return entries.stream()
-                .mapToDouble(LedgerEntry::getAmount)
-                .sum();
+        return wallet.getBalance();
     }
 
     public double recharge(UUID userId, double amount) {
@@ -47,6 +43,9 @@ public class WalletService {
         entry.setAmount(amount);
 
         ledgerRepository.save(entry);
+
+        wallet.setBalance(wallet.getBalance() + amount);
+        walletRepository.save(wallet);
 
         return getBalance(userId);
     }

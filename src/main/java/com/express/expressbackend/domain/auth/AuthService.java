@@ -5,6 +5,8 @@ import com.express.expressbackend.domain.user.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.express.expressbackend.domain.user.UserRole;
+import com.express.expressbackend.domain.wallet.Wallet;
+import com.express.expressbackend.domain.wallet.WalletRepository;
 
 
 @Service
@@ -13,34 +15,44 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final WalletRepository walletRepository;
     
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       WalletRepository walletRepository) {
 
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.walletRepository = walletRepository;
 
     }
 
-    public User signup(SignupRequest request) {
+    public AuthResponse signup(SignupRequest request) {
 
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
 
-        // generate display id
         String displayId = "USER" + System.currentTimeMillis();
         user.setPublicDisplayId(displayId);
-
         user.setRole(UserRole.USER);
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        Wallet wallet = new Wallet();
+        wallet.setUser(saved);
+        wallet.setBalance(0.0);
+
+        walletRepository.save(wallet);
+
+        String token = jwtService.generateToken(saved.getEmail());
+
+        return new AuthResponse(saved.getId(), saved.getEmail(), token);
     }
 
-    public String login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -54,6 +66,8 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        return jwtService.generateToken(user.getEmail());
+        String token = jwtService.generateToken(user.getEmail());
+
+        return new AuthResponse(user.getId(), user.getEmail(), token);
     }
 }
