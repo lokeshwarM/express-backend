@@ -9,6 +9,7 @@ public class SessionResponse {
     private UUID userId;
     private UUID listenerId;
     private SessionStatus status;
+    private SessionType type;
     private Instant startedAt;
     private Instant endedAt;
 
@@ -16,12 +17,14 @@ public class SessionResponse {
                            UUID userId,
                            UUID listenerId,
                            SessionStatus status,
+                           SessionType type,
                            Instant startedAt,
                            Instant endedAt) {
         this.id = id;
         this.userId = userId;
         this.listenerId = listenerId;
         this.status = status;
+        this.type = type;
         this.startedAt = startedAt;
         this.endedAt = endedAt;
     }
@@ -30,6 +33,7 @@ public class SessionResponse {
     public UUID getUserId() { return userId; }
     public UUID getListenerId() { return listenerId; }
     public SessionStatus getStatus() { return status; }
+    public SessionType getType() { return type; }
     public Instant getStartedAt() { return startedAt; }
     public Instant getEndedAt() { return endedAt; }
 }
