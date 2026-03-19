@@ -58,4 +58,9 @@ public class Listener {
     public void setRedFlagCount(int redFlagCount) { this.redFlagCount = redFlagCount; }
 
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = OffsetDateTime.now();
+    }
 }
