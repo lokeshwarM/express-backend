@@ -37,6 +37,9 @@ public class Session {
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
+    @Column(nullable = true)
+    private Instant lastActivityAt;
+
     public void setUser(User user) {
         this.user = user;
     }
@@ -96,4 +99,12 @@ public class Session {
     public void setType(SessionType type) {
         this.type = type;
     }    
+
+    public Instant getLastActivityAt() {
+        return lastActivityAt;
+    }
+
+    public void setLastActivityAt(Instant lastActivityAt) {
+        this.lastActivityAt = lastActivityAt;
+    }
 }

@@ -54,6 +54,20 @@ public class SessionController {
         return new ApiResponse<>(sessionService.endSession(id));
     }
 
+    @PostMapping("/{id}/heartbeat")
+    public ApiResponse<String> heartbeat(@PathVariable UUID id) {
+        sessionService.updateHeartbeat(id);
+        return new ApiResponse<>("OK");
+    }
+
+    // ✅ Get single session by id — used for session recovery check
+    @GetMapping("/{id}")
+    public ApiResponse<SessionResponse> getById(@PathVariable UUID id) {
+        Session session = sessionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Session not found"));
+        return new ApiResponse<>(sessionService.toResponse(session));
+    }
+
     @GetMapping("/active")
     public ApiResponse<SessionResponse> getActive() {
         String email = AuthUtil.getCurrentUserEmail();
@@ -70,7 +84,6 @@ public class SessionController {
         return new ApiResponse<>(sessionService.toResponse(session));
     }
 
-    // ✅ Returns all ended sessions for current user
     @GetMapping("/my")
     public ApiResponse<List<SessionResponse>> getMyHistory() {
         String email = AuthUtil.getCurrentUserEmail();
