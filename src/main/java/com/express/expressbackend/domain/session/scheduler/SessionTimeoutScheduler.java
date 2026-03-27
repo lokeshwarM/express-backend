@@ -33,12 +33,30 @@ public class SessionTimeoutScheduler {
 
             if (session.getStatus() == SessionStatus.STARTED) {
 
-                Instant started = session.getStartedAt();
-                long minutes = Duration.between(started, Instant.now()).toMinutes();
+                if (session.getStatus() == SessionStatus.STARTED) {
 
-                if (minutes >= 60) { // 1 hour safety timeout
-                    sessionService.endSession(session.getId());
+                    //  1. Inactivity timeout
+                    Instant lastActivity = session.getLastActivityAt();
+
+                    if (lastActivity != null) {
+                        long secondsInactive =
+                                Duration.between(lastActivity, Instant.now()).getSeconds();
+
+                        if (secondsInactive > 60) {
+                            sessionService.endSession(session.getId());
+                            continue;
+                        }
+                    }
+
+                    // 🔒 2. Hard max session timeout (backup)
+                    Instant started = session.getStartedAt();
+                    long minutes = Duration.between(started, Instant.now()).toMinutes();
+
+                    if (minutes >= 60) {
+                        sessionService.endSession(session.getId());
+                    }
                 }
+
             }
         }
     }

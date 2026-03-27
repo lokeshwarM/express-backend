@@ -15,4 +15,9 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
     Optional<Session> findByUserIdAndStatus(UUID userId, SessionStatus status);
 
     Optional<Session> findTopByUserIdAndStatusIn(UUID userId, List<SessionStatus> statuses);
+
+    Optional<Session> findTopByListenerIdAndStatusIn(
+        UUID listenerId,
+        List<SessionStatus> statuses
+    );
 }

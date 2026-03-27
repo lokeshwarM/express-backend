@@ -29,6 +29,9 @@ public class User {
     @Column(nullable = false)
     private boolean active;
 
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
@@ -39,19 +42,20 @@ public class User {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    public String getPasswordHash() {return passwordHash;}
-    public void setPasswordHash(String passwordHash) {this.passwordHash = passwordHash;}
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
     public String getPublicDisplayId() { return publicDisplayId; }
     public void setPublicDisplayId(String publicDisplayId) { this.publicDisplayId = publicDisplayId; }
 
-    public UserRole  getRole() { return role; }
-    public void setRole(UserRole  role) { this.role = role; }
+    public UserRole getRole() { return role; }
+    public void setRole(UserRole role) { this.role = role; }
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
 
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
     public OffsetDateTime getCreatedAt() { return createdAt; }
-
-
 }
