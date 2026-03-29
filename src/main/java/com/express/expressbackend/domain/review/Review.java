@@ -1,15 +1,16 @@
-package com.express.expressbackend.domain.flag;
+package com.express.expressbackend.domain.review;
 
 import com.express.expressbackend.domain.listener.Listener;
 import com.express.expressbackend.domain.session.Session;
+import com.express.expressbackend.domain.user.User;
 import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "flag_records")
-public class FlagRecord {
+@Table(name = "reviews")
+public class Review {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -20,26 +21,31 @@ public class FlagRecord {
     private Listener listener;
 
     @ManyToOne(optional = false)
+    private User user;
+
+    @ManyToOne(optional = false)
     private Session session;
 
     @Column(nullable = false)
-    private String reason;
+    private int rating; // 1-5
 
-    @Column(nullable = false)
-    private double confidenceScore;
+    @Column(length = 500)
+    private String comment;
 
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
     public UUID getId() { return id; }
     public Listener getListener() { return listener; }
+    public User getUser() { return user; }
     public Session getSession() { return session; }
-    public String getReason() { return reason; }
-    public double getConfidenceScore() { return confidenceScore; }
+    public int getRating() { return rating; }
+    public String getComment() { return comment; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
 
     public void setListener(Listener listener) { this.listener = listener; }
+    public void setUser(User user) { this.user = user; }
     public void setSession(Session session) { this.session = session; }
-    public void setReason(String reason) { this.reason = reason; }
-    public void setConfidenceScore(double confidenceScore) { this.confidenceScore = confidenceScore; }
+    public void setRating(int rating) { this.rating = rating; }
+    public void setComment(String comment) { this.comment = comment; }
 }

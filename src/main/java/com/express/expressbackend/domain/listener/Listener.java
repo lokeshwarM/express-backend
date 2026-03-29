@@ -28,35 +28,28 @@ public class Listener {
     @Column(nullable = false)
     private int redFlagCount;
 
+    // ✅ Average rating from user reviews (default 5.0)
+    @Column(nullable = false)
+    private double averageRating = 5.0;
+
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
     public Listener() {}
 
-    // ===== Getters =====
-
     public UUID getId() { return id; }
-
     public User getUser() { return user; }
-
     public boolean isAvailable() { return available; }
-
     public boolean isBlacklisted() { return blacklisted; }
-
     public int getRedFlagCount() { return redFlagCount; }
-
+    public double getAverageRating() { return averageRating; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
 
-    // ===== Setters =====
-
     public void setUser(User user) { this.user = user; }
-
     public void setAvailable(boolean available) { this.available = available; }
-
     public void setBlacklisted(boolean blacklisted) { this.blacklisted = blacklisted; }
-
     public void setRedFlagCount(int redFlagCount) { this.redFlagCount = redFlagCount; }
-
+    public void setAverageRating(double averageRating) { this.averageRating = averageRating; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
 
     @PrePersist
