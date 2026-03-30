@@ -49,18 +49,19 @@ public class SessionController {
         return new ApiResponse<>(sessionService.startSession(id));
     }
 
+    // ✅ NEW — called by user when WebRTC actually connects (both sides have audio/video)
+    // This resets startedAt to the real connection time so billing is fair
+    @PostMapping("/{id}/connected")
+    public ApiResponse<String> markConnected(@PathVariable UUID id) {
+        sessionService.markConnected(id);
+        return new ApiResponse<>("OK");
+    }
+
     @PostMapping("/{id}/end")
     public ApiResponse<SessionResponse> end(@PathVariable UUID id) {
         return new ApiResponse<>(sessionService.endSession(id));
     }
 
-    @PostMapping("/{id}/heartbeat")
-    public ApiResponse<String> heartbeat(@PathVariable UUID id) {
-        sessionService.updateHeartbeat(id);
-        return new ApiResponse<>("OK");
-    }
-
-    // ✅ Get single session by id — used for session recovery check
     @GetMapping("/{id}")
     public ApiResponse<SessionResponse> getById(@PathVariable UUID id) {
         Session session = sessionRepository.findById(id)

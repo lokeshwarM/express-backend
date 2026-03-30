@@ -33,16 +33,8 @@ public class SessionService {
     private final LedgerEntryRepository ledgerEntryRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // ✅ Minimum balance to START a session (not upfront deduction)
     private static final double MIN_BALANCE = 10.0;
-
-    // ✅ Grace period — sessions under 20 seconds are FREE (network drops etc.)
     private static final long GRACE_PERIOD_SECONDS = 20;
-
-    // ✅ Billing increments — 1 min 19 sec = 1 min, 1 min 20 sec = 2 min
-    // We charge per full minute ONLY after completing that minute
-    // i.e. floor(seconds / 60) — NOT ceil
-    // But minimum 1 minute IF session lasted more than grace period
     private static final double LISTENER_SHARE = 0.70;
     private static final double PLATFORM_SHARE = 0.30;
 
@@ -66,7 +58,6 @@ public class SessionService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Prevent duplicate active sessions
         Optional<Session> activeSession =
                 sessionRepository.findTopByUserIdAndStatusIn(
                         user.getId(), List.of(SessionStatus.STARTED, SessionStatus.CREATED));
@@ -74,7 +65,6 @@ public class SessionService {
             throw new RuntimeException("You already have an active session");
         }
 
-        // ✅ Check minimum balance — just enough for at least 1 minute
         Wallet wallet = walletRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
 
@@ -84,8 +74,6 @@ public class SessionService {
                 "Insufficient balance. Minimum ₹" + rate + " required to start a session."
             );
         }
-
-        // Also enforce absolute minimum of ₹10 so session is meaningful
         if (wallet.getBalance() < MIN_BALANCE) {
             throw new RuntimeException(
                 "Insufficient balance. Please recharge at least ₹" + MIN_BALANCE + " to start a session."
@@ -102,7 +90,8 @@ public class SessionService {
         session.setListener(listener);
         session.setType(type);
         session.setStatus(SessionStatus.STARTED);
-        session.setStartedAt(Instant.now());
+        // ✅ startedAt is NULL — will be set when WebRTC actually connects via /connected endpoint
+        session.setStartedAt(null);
         session.setCreatedAt(OffsetDateTime.now());
 
         listener.setAvailable(false);
@@ -110,7 +99,6 @@ public class SessionService {
 
         Session saved = sessionRepository.save(session);
 
-        // Notify listener via WebSocket
         messagingTemplate.convertAndSend(
                 "/topic/listener/" + listener.getUser().getId(),
                 Map.of(
@@ -121,6 +109,18 @@ public class SessionService {
         );
 
         return toResponse(saved);
+    }
+
+    // ✅ Called when WebRTC actually connects — resets billing clock to real connection time
+    @Transactional
+    public void markConnected(UUID sessionId) {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found"));
+
+        if (session.getStatus() == SessionStatus.STARTED) {
+            session.setStartedAt(Instant.now());
+            sessionRepository.save(session);
+        }
     }
 
     public SessionResponse createSession(String email, SessionType type) {
@@ -143,7 +143,6 @@ public class SessionService {
         Wallet wallet = walletRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
 
-        double rate = type == SessionType.VOICE ? 2.5 : 3.0;
         if (wallet.getBalance() < MIN_BALANCE) {
             throw new RuntimeException(
                 "Insufficient balance. Please recharge at least ₹" + MIN_BALANCE + " to start a session."
@@ -155,6 +154,7 @@ public class SessionService {
         session.setListener(listener);
         session.setType(type);
         session.setStatus(SessionStatus.CREATED);
+        session.setStartedAt(null);
         session.setCreatedAt(OffsetDateTime.now());
 
         listener.setAvailable(false);
@@ -192,8 +192,7 @@ public class SessionService {
         }
 
         session.setStatus(SessionStatus.STARTED);
-        session.setStartedAt(Instant.now());
-
+        session.setStartedAt(null); // Will be set when WebRTC connects
         Session saved = sessionRepository.save(session);
         return toResponse(saved);
     }
@@ -204,7 +203,6 @@ public class SessionService {
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
-        // Allow ending both STARTED and CREATED sessions
         if (session.getStatus() != SessionStatus.STARTED
                 && session.getStatus() != SessionStatus.CREATED) {
             throw new RuntimeException("Session is already ended");
@@ -215,106 +213,81 @@ public class SessionService {
         session.setEndedAt(endTime);
         sessionRepository.save(session);
 
-        // Only bill if session actually started
+        // ✅ Only bill if startedAt was set (WebRTC actually connected)
         if (session.getStartedAt() != null) {
 
             long totalSeconds = Duration.between(session.getStartedAt(), endTime).getSeconds();
 
-            // ✅ Grace period — under 20 seconds is completely FREE
-            if (totalSeconds < GRACE_PERIOD_SECONDS) {
-                // No billing — just free the listener
-                Listener listener = session.getListener();
-                listener.setAvailable(true);
-                listenerRepository.save(listener);
+            // Grace period — under 20s is FREE
+            if (totalSeconds >= GRACE_PERIOD_SECONDS) {
 
-                // Notify both sides
-                messagingTemplate.convertAndSend(
-                        "/topic/session/" + sessionId,
-                        Map.of("type", "session_ended", "sessionId", sessionId.toString())
-                );
+                long completedMinutes = totalSeconds / 60;
+                long remainingSeconds = totalSeconds % 60;
 
-                return toResponse(session);
+                long billableMinutes;
+                if (completedMinutes == 0) {
+                    billableMinutes = 1;
+                } else if (remainingSeconds >= 20) {
+                    billableMinutes = completedMinutes + 1;
+                } else {
+                    billableMinutes = completedMinutes;
+                }
+
+                double rate = session.getType() == SessionType.VOICE ? 2.5 : 3.0;
+                double amount = billableMinutes * rate;
+                double listenerAmount = amount * LISTENER_SHARE;
+                double platformAmount = amount * PLATFORM_SHARE;
+
+                // Debit user
+                Wallet userWallet = walletRepository.findByUserId(session.getUser().getId())
+                        .orElseThrow(() -> new RuntimeException("User wallet not found"));
+                double actualDeduction = Math.min(amount, userWallet.getBalance());
+                LedgerEntry debit = new LedgerEntry();
+                debit.setWallet(userWallet);
+                debit.setAmount(-actualDeduction);
+                debit.setType(LedgerType.SESSION_DEBIT);
+                ledgerEntryRepository.save(debit);
+                userWallet.setBalance(userWallet.getBalance() - actualDeduction);
+                walletRepository.save(userWallet);
+
+                double actualListenerAmount = actualDeduction * LISTENER_SHARE;
+                double actualPlatformAmount = actualDeduction * PLATFORM_SHARE;
+
+                // Credit listener
+                Wallet listenerWallet = walletRepository
+                        .findByUserId(session.getListener().getUser().getId())
+                        .orElseThrow(() -> new RuntimeException("Listener wallet not found"));
+                LedgerEntry credit = new LedgerEntry();
+                credit.setWallet(listenerWallet);
+                credit.setAmount(actualListenerAmount);
+                credit.setType(LedgerType.LISTENER_CREDIT);
+                ledgerEntryRepository.save(credit);
+                listenerWallet.setBalance(listenerWallet.getBalance() + actualListenerAmount);
+                walletRepository.save(listenerWallet);
+
+                // Credit platform
+                User platformUser = userRepository
+                        .findByPublicDisplayId("PLATFORM")
+                        .orElseThrow(() -> new RuntimeException("Platform user not found"));
+                Wallet platformWallet = walletRepository
+                        .findByUserId(platformUser.getId())
+                        .orElseThrow(() -> new RuntimeException("Platform wallet not found"));
+                LedgerEntry platformEntry = new LedgerEntry();
+                platformEntry.setWallet(platformWallet);
+                platformEntry.setAmount(actualPlatformAmount);
+                platformEntry.setType(LedgerType.PLATFORM_COMMISSION);
+                ledgerEntryRepository.save(platformEntry);
+                platformWallet.setBalance(platformWallet.getBalance() + actualPlatformAmount);
+                walletRepository.save(platformWallet);
             }
-
-            // ✅ Fair billing:
-            // - 0:00 – 1:19 → 1 minute
-            // - 1:20 – 2:19 → 2 minutes  (not 1:01 = 2 min like before)
-            // Logic: floor(seconds / 60) gives completed full minutes
-            // Then if remaining seconds >= 20, round up by 1 more minute
-            // This means partial minutes under 20s are free, over 20s cost 1 more minute
-            long completedMinutes = totalSeconds / 60;
-            long remainingSeconds = totalSeconds % 60;
-
-            long billableMinutes;
-            if (completedMinutes == 0) {
-                // Session lasted 20-59 seconds — charge 1 minute minimum
-                billableMinutes = 1;
-            } else if (remainingSeconds >= 20) {
-                // e.g. 1 min 20 sec → 2 min, 1 min 19 sec → 1 min
-                billableMinutes = completedMinutes + 1;
-            } else {
-                // e.g. 1 min 10 sec → 1 min (remaining under 20s is free)
-                billableMinutes = completedMinutes;
-            }
-
-            double rate = session.getType() == SessionType.VOICE ? 2.5 : 3.0;
-            double amount = billableMinutes * rate;
-            double listenerAmount = amount * LISTENER_SHARE;
-            double platformAmount = amount * PLATFORM_SHARE;
-
-            // Debit user wallet
-            Wallet userWallet = walletRepository.findByUserId(session.getUser().getId())
-                    .orElseThrow(() -> new RuntimeException("User wallet not found"));
-
-            // Cap deduction at actual balance (never go negative)
-            double actualDeduction = Math.min(amount, userWallet.getBalance());
-
-            LedgerEntry debit = new LedgerEntry();
-            debit.setWallet(userWallet);
-            debit.setAmount(-actualDeduction);
-            debit.setType(LedgerType.SESSION_DEBIT);
-            ledgerEntryRepository.save(debit);
-            userWallet.setBalance(userWallet.getBalance() - actualDeduction);
-            walletRepository.save(userWallet);
-
-            // Recalculate listener/platform share based on actual deduction
-            double actualListenerAmount = actualDeduction * LISTENER_SHARE;
-            double actualPlatformAmount = actualDeduction * PLATFORM_SHARE;
-
-            // Credit listener wallet
-            Wallet listenerWallet = walletRepository
-                    .findByUserId(session.getListener().getUser().getId())
-                    .orElseThrow(() -> new RuntimeException("Listener wallet not found"));
-            LedgerEntry credit = new LedgerEntry();
-            credit.setWallet(listenerWallet);
-            credit.setAmount(actualListenerAmount);
-            credit.setType(LedgerType.LISTENER_CREDIT);
-            ledgerEntryRepository.save(credit);
-            listenerWallet.setBalance(listenerWallet.getBalance() + actualListenerAmount);
-            walletRepository.save(listenerWallet);
-
-            // Credit platform wallet
-            User platformUser = userRepository
-                    .findByPublicDisplayId("PLATFORM")
-                    .orElseThrow(() -> new RuntimeException("Platform user not found"));
-            Wallet platformWallet = walletRepository
-                    .findByUserId(platformUser.getId())
-                    .orElseThrow(() -> new RuntimeException("Platform wallet not found"));
-            LedgerEntry platformEntry = new LedgerEntry();
-            platformEntry.setWallet(platformWallet);
-            platformEntry.setAmount(actualPlatformAmount);
-            platformEntry.setType(LedgerType.PLATFORM_COMMISSION);
-            ledgerEntryRepository.save(platformEntry);
-            platformWallet.setBalance(platformWallet.getBalance() + actualPlatformAmount);
-            walletRepository.save(platformWallet);
         }
+        // If startedAt was null (never actually connected) — NO billing at all ✅
 
-        // Free up the listener
+        // Free up listener
         Listener listener = session.getListener();
         listener.setAvailable(true);
         listenerRepository.save(listener);
 
-        // Notify both sides session ended
         messagingTemplate.convertAndSend(
                 "/topic/session/" + sessionId,
                 Map.of("type", "session_ended", "sessionId", sessionId.toString())
@@ -349,15 +322,5 @@ public class SessionService {
                 session.getStartedAt(),
                 session.getEndedAt()
         );
-    }
-    @Transactional
-    public void updateHeartbeat(UUID sessionId) {
-        Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
-
-        if (session.getStatus() == SessionStatus.STARTED) {
-                // Just a ping to confirm session is alive — no billing logic here
-                sessionRepository.save(session);
-        }
     }
 }
