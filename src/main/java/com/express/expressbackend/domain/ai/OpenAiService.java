@@ -26,7 +26,6 @@ public class OpenAiService {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    //  Analyze review text and return structured sentiment
     public SentimentResult analyzeSentiment(String reviewText) {
         try {
             String prompt = """
@@ -43,18 +42,17 @@ public class OpenAiService {
                 """.formatted(reviewText);
 
             String requestBody = objectMapper.writeValueAsString(Map.of(
-                "model", model,
-                "messages", new Object[]{
-                    Map.of("role", "user", "content", prompt)
-                },
-                "max_tokens", 200,
-                "temperature", 0.3
+                "contents", new Object[]{
+                    Map.of("parts", new Object[]{
+                        Map.of("text", prompt)
+                    })
+                }
             ));
 
+            // Gemini uses API key as query param
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl))
+                .uri(URI.create(apiUrl + "?key=" + apiKey))
                 .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
@@ -62,10 +60,10 @@ public class OpenAiService {
                 HttpResponse.BodyHandlers.ofString());
 
             JsonNode root = objectMapper.readTree(response.body());
-            String content = root.path("choices").get(0)
-                .path("message").path("content").asText();
+            String content = root.path("candidates").get(0)
+                .path("content").path("parts").get(0)
+                .path("text").asText();
 
-            // Strip markdown fences if present
             content = content.replaceAll("```json|```", "").trim();
 
             JsonNode result = objectMapper.readTree(content);
@@ -78,7 +76,6 @@ public class OpenAiService {
             return sr;
 
         } catch (Exception e) {
-            // Fallback if OpenAI fails — don't break the flow
             SentimentResult fallback = new SentimentResult();
             fallback.sentiment = "neutral";
             fallback.confidenceScore = 0.5;
