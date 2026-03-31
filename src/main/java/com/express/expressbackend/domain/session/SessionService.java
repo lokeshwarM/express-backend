@@ -6,9 +6,17 @@ import com.express.expressbackend.domain.user.User;
 import com.express.expressbackend.domain.user.UserRepository;
 import com.express.expressbackend.domain.wallet.Wallet;
 import com.express.expressbackend.domain.wallet.WalletRepository;
+import com.express.expressbackend.domain.ai.SmartMatchingService;
+import com.express.expressbackend.domain.ai.UserTagRepository;
 import com.express.expressbackend.domain.ledger.LedgerEntry;
 import com.express.expressbackend.domain.ledger.LedgerEntryRepository;
 import com.express.expressbackend.domain.ledger.LedgerType;
+
+import com.express.expressbackend.domain.ai.SmartMatchingService;
+import com.express.expressbackend.domain.ai.UserTag;
+import com.express.expressbackend.domain.ai.UserTagRepository;
+import com.express.expressbackend.domain.ai.UserMood;
+import com.express.expressbackend.domain.ai.UserMoodRepository;
 
 import jakarta.transaction.Transactional;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -38,18 +46,29 @@ public class SessionService {
     private static final double LISTENER_SHARE = 0.70;
     private static final double PLATFORM_SHARE = 0.30;
 
+    private final SmartMatchingService smartMatchingService;
+    private final UserTagRepository userTagRepository;
+    private final UserMoodRepository userMoodRepository;
+
+
     public SessionService(SessionRepository sessionRepository,
-                          UserRepository userRepository,
-                          ListenerRepository listenerRepository,
-                          WalletRepository walletRepository,
-                          LedgerEntryRepository ledgerEntryRepository,
-                          SimpMessagingTemplate messagingTemplate) {
+                        UserRepository userRepository,
+                        ListenerRepository listenerRepository,
+                        WalletRepository walletRepository,
+                        LedgerEntryRepository ledgerEntryRepository,
+                        SimpMessagingTemplate messagingTemplate,
+                        SmartMatchingService smartMatchingService,
+                        UserTagRepository userTagRepository,
+                        UserMoodRepository userMoodRepository) {
         this.sessionRepository = sessionRepository;
         this.userRepository = userRepository;
         this.listenerRepository = listenerRepository;
         this.walletRepository = walletRepository;
         this.ledgerEntryRepository = ledgerEntryRepository;
         this.messagingTemplate = messagingTemplate;
+        this.smartMatchingService = smartMatchingService;
+        this.userTagRepository = userTagRepository;
+        this.userMoodRepository = userMoodRepository;
     }
 
     @Transactional
@@ -80,7 +99,19 @@ public class SessionService {
             );
         }
 
-        Listener listener = listenerRepository.findRandomAvailableListener();
+        //  Smart matching — uses user tags + mood instead of random
+        List<String> userTags = userTagRepository.findByUserId(user.getId())
+                .stream()
+                .map(com.express.expressbackend.domain.ai.UserTag::getTag)
+                .collect(java.util.stream.Collectors.toList());
+
+        String userMood = userMoodRepository
+                .findTopByUserIdOrderByCreatedAtDesc(user.getId())
+                .map(com.express.expressbackend.domain.ai.UserMood::getMood)
+                .orElse("neutral");
+
+        Listener listener = smartMatchingService.findBestMatch(userTags, userMood);
+
         if (listener == null) {
             throw new RuntimeException("No listeners available right now. Try again shortly.");
         }
@@ -90,7 +121,6 @@ public class SessionService {
         session.setListener(listener);
         session.setType(type);
         session.setStatus(SessionStatus.STARTED);
-        // ✅ startedAt is NULL — will be set when WebRTC actually connects via /connected endpoint
         session.setStartedAt(null);
         session.setCreatedAt(OffsetDateTime.now());
 
@@ -111,7 +141,7 @@ public class SessionService {
         return toResponse(saved);
     }
 
-    // ✅ Called when WebRTC actually connects — resets billing clock to real connection time
+    //  Called when WebRTC actually connects — resets billing clock to real connection time
     @Transactional
     public void markConnected(UUID sessionId) {
         Session session = sessionRepository.findById(sessionId)
