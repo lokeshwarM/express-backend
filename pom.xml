@@ -11,7 +11,7 @@
 	<groupId>com.express</groupId>
 	<artifactId>express-backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<n>express-backend</n>
+	<name>express-backend</name>
 	<description>Production-grade backend for Express application</description>
 	<url/>
 	<licenses><license/></licenses>
