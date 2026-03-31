@@ -11,7 +11,7 @@
 	<groupId>com.express</groupId>
 	<artifactId>express-backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>express-backend</name>
+	<n>express-backend</n>
 	<description>Production-grade backend for Express application</description>
 	<url/>
 	<licenses><license/></licenses>
@@ -79,11 +79,15 @@
 			<artifactId>razorpay-java</artifactId>
 			<version>1.4.5</version>
 		</dependency>
-		<!-- Google OAuth token verification -->
 		<dependency>
 			<groupId>com.google.api-client</groupId>
 			<artifactId>google-api-client</artifactId>
 			<version>2.2.0</version>
+		</dependency>
+		<!--JSON processing for OpenAI API calls -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
 		</dependency>
 	</dependencies>
 	<build>

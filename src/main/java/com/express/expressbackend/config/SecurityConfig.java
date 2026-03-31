@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/ws/**").permitAll()
+                .requestMatchers("/ai/**").authenticated()
                 .requestMatchers("/admin/**").authenticated()
                 .anyRequest().authenticated()
             )
@@ -50,7 +51,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ✅ Add all allowed origins — localhost for dev, Vercel for production
+        //  Add all allowed origins — localhost for dev, Vercel for production
         configuration.setAllowedOrigins(List.of(
             "http://localhost:3000",
             "https://express-frontend-8tio.vercel.app"
