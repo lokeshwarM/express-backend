@@ -12,7 +12,10 @@ import com.express.expressbackend.domain.session.SessionStatus;
 import com.express.expressbackend.domain.user.User;
 import com.express.expressbackend.domain.user.UserRepository;
 import jakarta.transaction.Transactional;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.Map;
@@ -225,6 +228,50 @@ public class AiController {
                 "confidenceScore", result.confidenceScore,
                 "keyTopics", result.keyTopics,
                 "satisfactionScore", result.satisfactionScore
+        ));
+    }
+
+    
+    // PHASE 3 — REAL-TIME AI SUGGESTIONS FOR LISTENER
+
+    @Autowired
+    private AiSuggestionService aiSuggestionService;
+
+    // Called every 60s from listener's browser with transcript snippet
+    @PostMapping("/session/{sessionId}/suggest")
+    public ApiResponse<Map<String, Object>> getSuggestions(
+            @PathVariable UUID sessionId,
+            @RequestBody Map<String, String> body) {
+
+        String transcript = body.getOrDefault("transcript", "");
+        String userMood = body.getOrDefault("userMood", "neutral");
+
+        //  Critical state check — fast, no AI call needed
+        boolean isCritical = aiSuggestionService.isCriticalState(transcript);
+
+        if (isCritical) {
+            return new ApiResponse<>(Map.of(
+                "isCritical", true,
+                "suggestions", java.util.List.of(
+                    "Please stay calm and listen carefully.",
+                    "Ask if they are safe right now."
+                ),
+                "detectedEmotion", "crisis",
+                "urgencyLevel", "critical",
+                "alert", "⚠️ User may be in distress. Please respond with care and consider connecting them to professional help."
+            ));
+        }
+
+        //  Regular suggestions via AI
+        AiSuggestionService.SuggestionResult result =
+                aiSuggestionService.generateSuggestions(transcript, userMood);
+
+        return new ApiResponse<>(Map.of(
+            "isCritical", false,
+            "suggestions", result.suggestions,
+            "detectedEmotion", result.detectedEmotion,
+            "urgencyLevel", result.urgencyLevel,
+            "alert", ""
         ));
     }
 }
