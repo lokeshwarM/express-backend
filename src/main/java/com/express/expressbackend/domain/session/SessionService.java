@@ -11,6 +11,7 @@ import com.express.expressbackend.domain.ai.UserTagRepository;
 import com.express.expressbackend.domain.ledger.LedgerEntry;
 import com.express.expressbackend.domain.ledger.LedgerEntryRepository;
 import com.express.expressbackend.domain.ledger.LedgerType;
+import com.express.expressbackend.domain.ai.SessionIntelligenceService;
 
 import com.express.expressbackend.domain.ai.SmartMatchingService;
 import com.express.expressbackend.domain.ai.UserTag;
@@ -40,6 +41,7 @@ public class SessionService {
     private final WalletRepository walletRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final SessionIntelligenceService sessionIntelligenceService;
 
     private static final double MIN_BALANCE = 10.0;
     private static final long GRACE_PERIOD_SECONDS = 20;
@@ -57,6 +59,7 @@ public class SessionService {
                         WalletRepository walletRepository,
                         LedgerEntryRepository ledgerEntryRepository,
                         SimpMessagingTemplate messagingTemplate,
+                        SessionIntelligenceService sessionIntelligenceService,
                         SmartMatchingService smartMatchingService,
                         UserTagRepository userTagRepository,
                         UserMoodRepository userMoodRepository) {
@@ -66,6 +69,7 @@ public class SessionService {
         this.walletRepository = walletRepository;
         this.ledgerEntryRepository = ledgerEntryRepository;
         this.messagingTemplate = messagingTemplate;
+        this.sessionIntelligenceService = sessionIntelligenceService;
         this.smartMatchingService = smartMatchingService;
         this.userTagRepository = userTagRepository;
         this.userMoodRepository = userMoodRepository;
