@@ -35,6 +35,8 @@ public class AiController {
     private final SessionRepository sessionRepository;
     private final ReviewRepository reviewRepository;
     private final OpenAiService openAiService;
+    private final SessionEvaluationRepository evaluationRepository;
+    private final UserMemoryRepository userMemoryRepository;
 
     public AiController(UserRepository userRepository,
                         ListenerRepository listenerRepository,
@@ -44,7 +46,10 @@ public class AiController {
                         SessionSentimentRepository sentimentRepository,
                         SessionRepository sessionRepository,
                         ReviewRepository reviewRepository,
-                        OpenAiService openAiService) {
+                        OpenAiService openAiService,
+                        SessionEvaluationRepository evaluationRepository,
+                        UserMemoryRepository userMemoryRepository
+                    ) {
         this.userRepository = userRepository;
         this.listenerRepository = listenerRepository;
         this.userTagRepository = userTagRepository;
@@ -54,6 +59,8 @@ public class AiController {
         this.sessionRepository = sessionRepository;
         this.reviewRepository = reviewRepository;
         this.openAiService = openAiService;
+        this.evaluationRepository=evaluationRepository;
+        this.userMemoryRepository=userMemoryRepository;
     }
 
 
@@ -273,5 +280,54 @@ public class AiController {
             "urgencyLevel", result.urgencyLevel,
             "alert", ""
         ));
+    }
+
+    // PHASE 5 — USER MEMORY / PROFILE
+    
+    // Get current user's memory profile
+    @GetMapping("/user/memory")
+    public ApiResponse<Map<String, Object>> getUserMemory() {
+        String email = AuthUtil.getCurrentUserEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return userMemoryRepository.findByUserId(user.getId())
+                .map(m -> new ApiResponse<>(Map.of(
+                    "totalSessions", (Object) m.getTotalSessions(),
+                    "avgSatisfactionScore", m.getAvgSatisfactionScore(),
+                    "dominantEmotion", m.getDominantEmotion() != null ? m.getDominantEmotion() : "neutral",
+                    "recurringTopics", m.getRecurringTopics() != null ? m.getRecurringTopics() : "",
+                    "recurringStress", m.isRecurringStress(),
+                    "lastSessionSentiment", m.getLastSessionSentiment() != null ? m.getLastSessionSentiment() : "neutral",
+                    "emotionalTrend", m.getEmotionalTrend() != null ? m.getEmotionalTrend() : "stable",
+                    "updatedAt", m.getUpdatedAt().toString()
+                )))
+                .orElse(new ApiResponse<>(Map.of(
+                    "totalSessions", 0,
+                    "avgSatisfactionScore", 5.0,
+                    "dominantEmotion", "neutral",
+                    "recurringTopics", "",
+                    "recurringStress", false,
+                    "lastSessionSentiment", "neutral",
+                    "emotionalTrend", "stable",
+                    "updatedAt", ""
+                )));
+    }
+
+    // PHASE 4 — SESSION EVALUATION
+    
+    // Get evaluation for a specific session
+    @GetMapping("/session/{sessionId}/evaluation")
+    public ApiResponse<Map<String, Object>> getSessionEvaluation(@PathVariable UUID sessionId) {
+        return evaluationRepository.findBySessionId(sessionId)
+                .map(e -> new ApiResponse<>(Map.of(
+                    "effectivenessScore", (Object) e.getEffectivenessScore(),
+                    "durationSeconds", e.getDurationSeconds(),
+                    "positiveOutcome", e.isPositiveOutcome(),
+                    "flagged", e.isFlagged(),
+                    "anomaly", e.isAnomaly(),
+                    "engagementLevel", e.getEngagementLevel()
+                )))
+                .orElse(new ApiResponse<>(Map.of("message", "Not evaluated yet")));
     }
 }

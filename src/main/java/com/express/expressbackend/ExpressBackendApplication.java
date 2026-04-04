@@ -12,11 +12,13 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.util.UUID;
 
 @SpringBootApplication
 @EnableScheduling
+@EnableAsync
 @EntityScan(basePackages = "com.express.expressbackend.domain")
 public class ExpressBackendApplication {
 

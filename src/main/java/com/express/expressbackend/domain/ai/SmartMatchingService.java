@@ -6,6 +6,9 @@ import com.express.expressbackend.domain.session.Session;
 import com.express.expressbackend.domain.session.SessionRepository;
 import com.express.expressbackend.domain.session.SessionStatus;
 import org.springframework.stereotype.Service;
+import com.express.expressbackend.domain.ai.SessionEvaluationRepository;
+import com.express.expressbackend.domain.ai.UserMemoryRepository;
+import com.express.expressbackend.domain.ai.UserMemory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -16,13 +19,20 @@ public class SmartMatchingService {
     private final ListenerRepository listenerRepository;
     private final ListenerTagRepository listenerTagRepository;
     private final SessionRepository sessionRepository;
+    private final SessionEvaluationRepository evaluationRepository;
+    private final UserMemoryRepository userMemoryRepository;
 
     public SmartMatchingService(ListenerRepository listenerRepository,
                                 ListenerTagRepository listenerTagRepository,
-                                SessionRepository sessionRepository) {
+                                SessionRepository sessionRepository,
+                                SessionEvaluationRepository evaluationRepository,
+                                UserMemoryRepository userMemoryRepository
+                            ) {
         this.listenerRepository = listenerRepository;
         this.listenerTagRepository = listenerTagRepository;
         this.sessionRepository = sessionRepository;
+        this.evaluationRepository = evaluationRepository;
+        this.userMemoryRepository = userMemoryRepository;
     }
 
     // Core smart matching — finds best listener for user
@@ -80,7 +90,18 @@ public class SmartMatchingService {
                 .stream()
                 .filter(s -> s.getStatus() == SessionStatus.ENDED)
                 .count();
-            score += Math.min(10, completedSessions * 0.5);
+                
+            // If user has recurring stress, prefer listeners who had high effectiveness with similar users
+            if (userMood != null && (userMood.equals("stressed") || userMood.equals("anxious"))) {
+                double avgEffectiveness = evaluationRepository
+                    .findBySessionListenerId(listener.getId())
+                    .stream()
+                    .mapToDouble(com.express.expressbackend.domain.ai.SessionEvaluation::getEffectivenessScore)
+                    .average()
+                    .orElse(5.0);
+                // Normalize 1-10 score to 0-10 points
+                score += ((avgEffectiveness - 1.0) / 9.0) * 10;
+            }
 
             if (score > bestScore) {
                 bestScore = score;
