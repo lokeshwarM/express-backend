@@ -247,7 +247,7 @@ public class SessionService {
         session.setEndedAt(endTime);
         sessionRepository.save(session);
 
-        // ✅ Only bill if startedAt was set (WebRTC actually connected)
+        //  Only bill if startedAt was set (WebRTC actually connected)
         if (session.getStartedAt() != null) {
 
             long totalSeconds = Duration.between(session.getStartedAt(), endTime).getSeconds();
@@ -326,7 +326,7 @@ public class SessionService {
                 "/topic/session/" + sessionId,
                 Map.of("type", "session_ended", "sessionId", sessionId.toString())
         );
-
+        sessionIntelligenceService.evaluateSession(session);
         return toResponse(session);
     }
 
