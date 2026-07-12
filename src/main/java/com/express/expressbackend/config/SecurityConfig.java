@@ -54,7 +54,7 @@ public class SecurityConfig {
         //  Add all allowed origins — localhost for dev, Vercel for production
         configuration.setAllowedOrigins(List.of(
             "http://localhost:3000",
-            "https://express-frontend-8tio.vercel.app"
+            "https://express-frontend-weld.vercel.app"
         ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
